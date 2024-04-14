@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import gravatar from "gravatar";
 
 import * as authServices from "../services/authServices.js";
 import * as userServices from "../services/userServices.js";
@@ -16,8 +17,8 @@ const signup = async (req, res, next) => {
     if (user) {
       throw HttpError(409, "Email already in use");
     }
-
-    const newUser = await authServices.signup(req.body);
+    const avatarURL = gravatar.url(email);
+    const newUser = await authServices.signup({ ...req.body, avatarURL });
 
     res.status(201).json({
       email: newUser.email,
