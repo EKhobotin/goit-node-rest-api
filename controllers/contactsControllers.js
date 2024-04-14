@@ -7,7 +7,8 @@ import HttpError from "../helpers/HttpError.js";
 
 export const getAllContacts = async (req, res, next) => {
   try {
-    const result = await contactsService.listContacts();
+    const { _id: owner } = req.user;
+    const result = await contactsService.listContacts({ owner });
     res.json(result);
   } catch (error) {
     next(error);
@@ -44,8 +45,9 @@ export const createContact = async (req, res, next) => {
   try {
     const { error } = createContactSchema.validate(req.body);
     if (error) throw HttpError(400, error.message);
+    const { _id: owner } = req.user;
     const { name, email, phone } = req.body;
-    const result = await contactsService.addContact(name, email, phone);
+    const result = await contactsService.addContact(name, email, phone, owner);
     res.status(201).json(result);
   } catch (error) {
     next(error);
