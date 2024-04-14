@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import path from "path";
 import gravatar from "gravatar";
+import fs from "fs/promises";
 
 import * as authServices from "../services/authServices.js";
 import * as userServices from "../services/userServices.js";
@@ -9,6 +11,7 @@ import * as userServices from "../services/userServices.js";
 import HttpError from "../helpers/HttpError.js";
 
 const { JWT_SECRET } = process.env;
+const avatarsDir = path.resolve("public", "avatars");
 
 const signup = async (req, res, next) => {
   try {
@@ -82,10 +85,24 @@ const signout = async (req, res, next) => {
     next(error);
   }
 };
+const updateAvatar = async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const { path: oldPath, filename } = req.file;
+    const newPath = path.join(avatarsDir, filename);
+    await fs.rename(oldPath, newPath);
+    const avatarURL = path.join("avatars", filename);
+    await authServices.setAvatar(_id, avatarURL);
+    return res.json({ avatarURL });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export default {
   signup,
   signin,
   getCurrent,
   signout,
+  updateAvatar,
 };

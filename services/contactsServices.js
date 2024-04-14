@@ -15,7 +15,7 @@ export async function removeContact(contactId) {
 }
 
 export async function addContact(body) {
-  Contact.create(body);
+  return Contact.create(body);
 }
 
 export async function updateContact(id, body) {

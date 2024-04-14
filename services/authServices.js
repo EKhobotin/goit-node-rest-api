@@ -9,4 +9,7 @@ export const signup = async (data) => {
 };
 
 export const setToken = (id, token = "") =>
-  user.findByIdAndUpdate(id, { token });
+    user.findByIdAndUpdate(id, { token });
+  
+export const setAvatar = (id, avatarURL) =>
+    user.findByIdAndUpdate(id, { avatarURL });
