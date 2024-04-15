@@ -23,16 +23,16 @@ const signup = async (req, res, next) => {
       throw HttpError(409, "Email already in use");
     }
     const avatarURL = gravatar.url(email);
-    const verificationCode = nanoid();
+    const verificationToken = nanoid();
     const newUser = await authServices.signup({
       ...req.body,
       avatarURL,
-      verificationCode,
+      verificationToken,
     });
     const verifyEmail = {
       to: email,
       subject: "Verify email",
-      html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${verificationCode}">CLick to verify email</a>`,
+      html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${verificationToken}">CLick to verify email</a>`,
     };
 
     await sendEmail(verifyEmail);
@@ -53,6 +53,9 @@ const signin = async (req, res, next) => {
     if (!user) {
       throw HttpError(401, "Email or password invalid");
     }
+    if (!user.verify) {
+      throw HttpError(401, "Email not verify");
+    }
     const passwordCompare = await bcrypt.compare(password, user.password);
     if (!passwordCompare) {
       throw HttpError(401, "Email or password invalid");
@@ -68,6 +71,54 @@ const signin = async (req, res, next) => {
     res.json({
       token,
       user: { email: user.email, subscription: user.subscription },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+    const user = await userServices.findUser({ verificationToken });
+    if (!user) {
+      throw HttpError(404, "User not found");
+    }
+    await userServices.findByIdAndUpd(user._id, {
+      verify: true,
+      verificationToken: "",
+    });
+
+    res.json({
+      message: "Verification successful",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyResend = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      throw HttpError(400, "missing required field email");
+    }
+    const user = userServices.findUser({ email });
+    if (!user) {
+      throw HttpError(404, "User not found");
+    }
+    if (user.verify) {
+      throw HttpError(400, "Verification has already been passed");
+    }
+    const verifyEmail = {
+      to: email,
+      subject: "Verify email",
+      html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${user.verificationToken}">CLick to verify email</a>`,
+    };
+
+    await sendEmail(verifyEmail);
+    res.json({
+      message: "Verification email sent",
     });
   } catch (error) {
     next(error);
@@ -119,4 +170,6 @@ export default {
   getCurrent,
   signout,
   updateAvatar,
+  verifyEmail,
+  verifyResend,
 };
