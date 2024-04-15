@@ -4,13 +4,15 @@ import "dotenv/config";
 import path from "path";
 import gravatar from "gravatar";
 import fs from "fs/promises";
+import { nanoid } from "nanoid";
+import sendEmail from "../helpers/sendEmail.js";
 
 import * as authServices from "../services/authServices.js";
 import * as userServices from "../services/userServices.js";
 
 import HttpError from "../helpers/HttpError.js";
 
-const { JWT_SECRET } = process.env;
+const { JWT_SECRET, BASE_URL } = process.env;
 const avatarsDir = path.resolve("public", "avatars");
 
 const signup = async (req, res, next) => {
@@ -21,7 +23,19 @@ const signup = async (req, res, next) => {
       throw HttpError(409, "Email already in use");
     }
     const avatarURL = gravatar.url(email);
-    const newUser = await authServices.signup({ ...req.body, avatarURL });
+    const verificationCode = nanoid();
+    const newUser = await authServices.signup({
+      ...req.body,
+      avatarURL,
+      verificationCode,
+    });
+    const verifyEmail = {
+      to: email,
+      subject: "Verify email",
+      html: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${verificationCode}">CLick to verify email</a>`,
+    };
+
+    await sendEmail(verifyEmail);
 
     res.status(201).json({
       email: newUser.email,
